@@ -7,6 +7,7 @@
     <title>Document</title>
   </head>
   <body>
+    <div id="app">1</div>
     <script src="./vue.js"></script>
     <script>
       let vm = new Vue({
@@ -20,8 +21,9 @@
             hobby: ["study", "eat", "travel", { a: 1 }],
           };
         },
+        el: "#app",
       });
-      console.log(vm);
+      // console.log(vm);
     </script>
   </body>
 </html>
