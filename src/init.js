@@ -22,8 +22,11 @@ export function initMixin(Vue) {
             // 模板编译
             if (template) {
                 const render = compileToFunction(template)
+                ops.render = render
             }
+
         }
+        console.log(ops.render);
 
     }
 }
