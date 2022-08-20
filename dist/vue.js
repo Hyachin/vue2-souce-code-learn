@@ -4,8 +4,131 @@
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 })(this, (function () { 'use strict';
 
+    var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
+    var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
+    var startTagOpen = new RegExp("^<".concat(qnameCapture));
+    var endTag = new RegExp("^<\\/".concat(qnameCapture, "[^>]*>"));
+    var attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
+    var startTagClose = /^\s*(\/?)>/;
+
+    function parseHTML(html) {
+      var ELEMENT_TYPE = 1;
+      var TEXT_TYPE = 3;
+      var stack = [];
+      var currentParent;
+      var root;
+
+      function createASTElement(tag, attrs) {
+        return {
+          tag: tag,
+          type: ELEMENT_TYPE,
+          children: [],
+          attrs: attrs,
+          parent: null
+        };
+      }
+
+      function start(tag, attrs) {
+        var node = createASTElement(tag, attrs);
+
+        if (!root) {
+          root = node;
+        }
+
+        if (currentParent) {
+          node.parent = currentParent;
+          currentParent.children.push(node);
+        }
+
+        stack.push(node);
+        currentParent = node;
+      }
+
+      function chars(text) {
+        text = text.replace(/\s/g, '');
+        text && currentParent.children.push({
+          type: TEXT_TYPE,
+          text: text,
+          parent: currentParent
+        });
+      }
+
+      function end(tag) {
+        stack.pop();
+        currentParent = stack[stack.length - 1];
+      } // 删除已匹配过的内容
+
+
+      function advance(n) {
+        html = html.substring(n);
+      }
+
+      function parseStartTag() {
+        var start = html.match(startTagOpen);
+
+        if (start) {
+          var match = {
+            tagName: start[1],
+            attrs: []
+          };
+          advance(start[0].length);
+
+          var attr, _end;
+
+          while (!(_end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+            advance(attr[0].length);
+            match.attrs.push({
+              name: attr[1],
+              value: attr[3] || attr[4] || attr[5] || true
+            });
+          }
+
+          if (_end) {
+            advance(_end[0].length);
+          }
+
+          return match;
+        } // console.log(html);
+
+
+        return false;
+      }
+
+      while (html) {
+        var textEnd = html.indexOf('<'); // 开始标签或结束标签
+
+        if (textEnd == 0) {
+          var startTagMatch = parseStartTag();
+
+          if (startTagMatch) {
+            start(startTagMatch.tagName, startTagMatch.attrs);
+            continue;
+          }
+
+          var endTagMatch = html.match(endTag);
+
+          if (endTagMatch) {
+            end(endTagMatch[1]);
+            advance(endTagMatch[0].length);
+            continue;
+          }
+        }
+
+        if (textEnd > 0) {
+          var text = html.substring(0, textEnd);
+
+          if (text) {
+            chars(text);
+            advance(text.length);
+          }
+        }
+      }
+
+      console.log(root);
+    }
+
     function compileToFunction(template) {
-      console.log(template);
+      parseHTML(template); // console.log(template);
     }
 
     function _typeof(obj) {
