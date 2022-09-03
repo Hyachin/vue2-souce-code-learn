@@ -9,7 +9,7 @@
   <body>
     <div id="app" style="color: red; background: yellow">
       <div style="color: red; font-size: 20px" key="123">
-        {{name}} hello {{age}} hello
+        {{name}} hello {{age}} hello {{name}}
       </div>
       <span>world</span>
     </div>
@@ -32,7 +32,7 @@
       setTimeout(() => {
         vm.name = "ls";
         vm.age = 20;
-        vm._update(vm._render());
+        // vm._update(vm._render());
       }, 1000);
       // console.log(vm);
     </script>

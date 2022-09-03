@@ -1,3 +1,4 @@
+import Watcher from './observe/watcher'
 import { createElementVNode, createTextVNode } from './vdom/index'
 function createElm(vnode) {
     let { tag, data, children, text } = vnode
@@ -31,7 +32,6 @@ function patch(oldVNode, vnode) {
         const elm = oldVNode
         const parentElm = elm.parentNode
         let newElm = createElm(vnode)
-        console.log(newElm);
         parentElm.insertBefore(newElm, elm.nextSibiling)
         parentElm.removeChild(elm)
         return newElm
@@ -43,7 +43,6 @@ export function initLifeCycle(Vue) {
     Vue.prototype._update = function (vnode) {
         const vm = this
         const el = vm.$el
-        console.log(vnode);
         vm.$el = patch(el, vnode)
     }
     Vue.prototype._c = function () {
@@ -64,7 +63,11 @@ export function initLifeCycle(Vue) {
 export function mountComponent(vm, el) {
     vm.$el = el
     // 1.调用render方法产生虚拟节点 虚拟DOM
-    vm._update(vm._render())
+    const updateComponent = () => {
+        vm._update(vm._render())
+    }
+    let watcher = new Watcher(vm, updateComponent, true) // true用于标识是一个渲染watcher
+    console.log(watcher);
     // 2.根据虚拟DOM产生真实DOM
 
     // 3.插入到el元素中

@@ -65,3 +65,35 @@ Vue 构造函数接受 options 参数获取用户传递的配置信息
 解析 vnode 的属性，使用提供的 dom api 创建真实 dom
 
 在元素替换时，需要插入到当前替换元素的下一个位置，再把当前元素删除，以此保证元素顺序的一致性。
+
+## 依赖收集
+
+只有在模板中使用到的变量才会做依赖收集
+
+### 概念
+
+watcher：一个 watcher 对应一个组件
+
+dep：一个属性对应一个 dep，用于收集 watcher
+
+dep 与 watcher 的关系：
+
+- 多对多
+- n 个 dep 对应 1 个 watcher（n 个属性对应一个组件）
+- 1 个 dep 对应多个 watcher（1 个属性对应多个组件）
+
+### 过程
+
+每一个属性都有一个收集器 dep
+
+页面渲染的时候，将渲染逻辑封装到 watcher 中 （作为回调传入）
+
+渲染逻辑：vm.\_update(vm.\_render())
+
+Dep 静态变量全局记录当前 watcher，之后再去调用 getter，去做取值操作
+
+取值时自动调用 defineProperty 的 get 方法
+
+通过 depend 方法，将当前 watcher 存放到 dep 的队列中，同时也让 watcher 记住 dep，实现去重 + 双向收集
+
+当给变量重新赋值时，会自动触发 set 方法，这时候通知这个变量对应 dep 中存放的所有 watcher 进行视图的重新渲染

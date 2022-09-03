@@ -1,4 +1,5 @@
 import { newArrayProto } from "./array"
+import Dep from "./dep"
 
 class Observer {
     constructor(data) {
@@ -27,16 +28,21 @@ export function observe(data) {
 }
 export function defineReactive(target, key, value) {
     observe(value) //对深层嵌套的对象也进行属性劫持
+    let dep = new Dep()
     Object.defineProperty(target, key, {
         get() {
-            console.log(`获取${key}属性，值为${value}`);
+            if (Dep.target) {
+                dep.depend()
+            }
+            // console.log(`获取${key}属性，值为${value}`);
             return value
         },
         set(newValue) {
             if (newValue === value) return
-            console.log(`修改${key}属性，值为${newValue}`);
+            // console.log(`修改${key}属性，值为${newValue}`);
             observe(newValue)
             value = newValue
+            dep.notify() // 通知更新视图
         }
     })
 }

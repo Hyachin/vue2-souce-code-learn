@@ -98,6 +98,89 @@
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
+  var id$1 = 0;
+
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+
+      this.id = id$1++; // 属性的dep要收集watcher，这里存放着当前属性对应的watcher有哪些
+
+      this.subs = [];
+    }
+
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        // this.subs.push(Dep.target)
+        Dep.target.addDep(this); // 让watcher记住dep
+      }
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        this.subs.push(watcher);
+      }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
+    }]);
+
+    return Dep;
+  }();
+
+  Dep.target = null;
+
+  var id = 0;
+
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, fn, options) {
+      _classCallCheck(this, Watcher);
+
+      this.id = id++;
+      this.renderWatcher = options;
+      this.getter = fn;
+      this.deps = []; // 后续实现计算属性和一些清理工作需要用到
+
+      this.depsId = new Set();
+      this.get();
+    }
+
+    _createClass(Watcher, [{
+      key: "addDep",
+      value: function addDep(dep) {
+        // 一个组件 对应着多个属性 重复的属性不需要记录
+        var id = dep.id;
+
+        if (!this.depsId.has(id)) {
+          this.deps.push(dep);
+          this.depsId.add(id);
+          dep.addSub(this); // 让dep也记住watcher
+        }
+      }
+    }, {
+      key: "get",
+      value: function get() {
+        Dep.target = this;
+        this.getter(); // 会去vm上取值
+        // 为什么要设置null？ 确保其只在模板中取值的时候才做依赖收集
+
+        Dep.target = null;
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        console.log('update');
+        this.get(); // 重新渲染
+      }
+    }]);
+
+    return Watcher;
+  }();
+
   function createElementVNode(vm, tag) {
     var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
@@ -173,7 +256,6 @@
       var elm = oldVNode;
       var parentElm = elm.parentNode;
       var newElm = createElm(vnode);
-      console.log(newElm);
       parentElm.insertBefore(newElm, elm.nextSibiling);
       parentElm.removeChild(elm);
       return newElm;
@@ -184,7 +266,6 @@
     Vue.prototype._update = function (vnode) {
       var vm = this;
       var el = vm.$el;
-      console.log(vnode);
       vm.$el = patch(el, vnode);
     };
 
@@ -209,9 +290,14 @@
   function mountComponent(vm, el) {
     vm.$el = el; // 1.调用render方法产生虚拟节点 虚拟DOM
 
-    vm._update(vm._render()); // 2.根据虚拟DOM产生真实DOM
-    // 3.插入到el元素中
+    var updateComponent = function updateComponent() {
+      vm._update(vm._render());
+    };
 
+    var watcher = new Watcher(vm, updateComponent, true); // true用于标识是一个渲染watcher
+
+    console.log(watcher); // 2.根据虚拟DOM产生真实DOM
+    // 3.插入到el元素中
   }
 
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
@@ -507,16 +593,22 @@
   function defineReactive(target, key, value) {
     observe(value); //对深层嵌套的对象也进行属性劫持
 
+    var dep = new Dep();
     Object.defineProperty(target, key, {
       get: function get() {
-        console.log("\u83B7\u53D6".concat(key, "\u5C5E\u6027\uFF0C\u503C\u4E3A").concat(value));
+        if (Dep.target) {
+          dep.depend();
+        } // console.log(`获取${key}属性，值为${value}`);
+
+
         return value;
       },
       set: function set(newValue) {
-        if (newValue === value) return;
-        console.log("\u4FEE\u6539".concat(key, "\u5C5E\u6027\uFF0C\u503C\u4E3A").concat(newValue));
+        if (newValue === value) return; // console.log(`修改${key}属性，值为${newValue}`);
+
         observe(newValue);
         value = newValue;
+        dep.notify(); // 通知更新视图
       }
     });
   }
