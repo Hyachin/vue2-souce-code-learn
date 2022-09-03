@@ -1,3 +1,4 @@
+import { mountComponent } from "./lifecycle"
 import { compileToFunction } from "./compiler/index"
 import { initState } from "./state"
 
@@ -11,6 +12,7 @@ export function initMixin(Vue) {
         }
     }
     Vue.prototype.$mount = function (el) {
+        const vm = this
         let ops = this.$options
         el = document.querySelector(el)
         // 编译优先级： render>tamplate>el
@@ -26,7 +28,7 @@ export function initMixin(Vue) {
             }
 
         }
-        console.log(ops.render);
-
+        // 组件的挂载
+        mountComponent(vm, el)
     }
 }

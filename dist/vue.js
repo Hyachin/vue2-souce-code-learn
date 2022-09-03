@@ -98,6 +98,122 @@
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
+  function createElementVNode(vm, tag) {
+    var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+    if (data == null) {
+      data = {};
+    }
+
+    var key = data.key;
+
+    if (key) {
+      delete data.key;
+    }
+
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
+    }
+
+    return vnode(vm, tag, key, data, children);
+  }
+  function createTextVNode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
+  } // vnode 和 ast 不一样
+  // ast 做的是语法层面的转换 他描述的是语法本身 (可以描述js css html)
+  // 虚拟dom 描述的dom元素,可以增加一些自定义属性(描述dom的)
+
+  function vnode(vm, tag, key, data, children, text) {
+    return {
+      vm: vm,
+      tag: tag,
+      key: key,
+      data: data,
+      children: children,
+      text: text
+    };
+  }
+
+  function createElm(vnode) {
+    var tag = vnode.tag,
+        data = vnode.data,
+        children = vnode.children,
+        text = vnode.text;
+
+    if (typeof tag === 'string') {
+      vnode.el = document.createElement(tag);
+      patchProps(vnode.el, data);
+      children.forEach(function (child) {
+        vnode.el.appendChild(createElm(child));
+      });
+    } else {
+      vnode.el = document.createTextNode(text);
+    }
+
+    return vnode.el;
+  }
+
+  function patchProps(el, props) {
+    for (var key in props) {
+      if (key === 'style') {
+        for (var styleName in props.style) {
+          el.style[styleName] = props.style[styleName];
+        }
+      } else {
+        el.setAttribute(key, props[key]);
+      }
+    }
+  } // patch既有初始化的功能 又有更新的功能
+
+
+  function patch(oldVNode, vnode) {
+    var isRealElement = oldVNode.nodeType;
+
+    if (isRealElement) {
+      var elm = oldVNode;
+      var parentElm = elm.parentNode;
+      var newElm = createElm(vnode);
+      console.log(newElm);
+      parentElm.insertBefore(newElm, elm.nextSibiling);
+      parentElm.removeChild(elm);
+      return newElm;
+    }
+  }
+
+  function initLifeCycle(Vue) {
+    Vue.prototype._update = function (vnode) {
+      var vm = this;
+      var el = vm.$el;
+      console.log(vnode);
+      vm.$el = patch(el, vnode);
+    };
+
+    Vue.prototype._c = function () {
+      return createElementVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._v = function () {
+      return createTextVNode.apply(void 0, [this].concat(Array.prototype.slice.call(arguments)));
+    };
+
+    Vue.prototype._s = function (value) {
+      if (_typeof(value) !== 'object') return value;
+      return JSON.stringify(value);
+    };
+
+    Vue.prototype._render = function () {
+      var vm = this;
+      return vm.$options.render.call(vm);
+    };
+  }
+  function mountComponent(vm, el) {
+    vm.$el = el; // 1.调用render方法产生虚拟节点 虚拟DOM
+
+    vm._update(vm._render()); // 2.根据虚拟DOM产生真实DOM
+    // 3.插入到el元素中
+
+  }
+
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
   var qnameCapture = "((?:".concat(ncname, "\\:)?").concat(ncname, ")");
   var startTagOpen = new RegExp("^<".concat(qnameCapture));
@@ -235,6 +351,8 @@
                 key = _item$split2[0],
                 value = _item$split2[1];
 
+            key = key.trim();
+            value = value.trim();
             obj[key] = value;
           });
           attr.value = obj;
@@ -444,6 +562,7 @@
     };
 
     Vue.prototype.$mount = function (el) {
+      var vm = this;
       var ops = this.$options;
       el = document.querySelector(el); // 编译优先级： render>tamplate>el
 
@@ -459,9 +578,10 @@
           var render = compileToFunction(template);
           ops.render = render;
         }
-      }
+      } // 组件的挂载
 
-      console.log(ops.render);
+
+      mountComponent(vm, el);
     };
   }
 
@@ -470,6 +590,7 @@
   }
 
   initMixin(Vue);
+  initLifeCycle(Vue);
 
   return Vue;
 

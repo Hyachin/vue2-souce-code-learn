@@ -49,3 +49,19 @@ Vue 构造函数接受 options 参数获取用户传递的配置信息
 子元素则全部遍历，根据其元素类型进行不同处理
 
 处理完之后通过 new Function 让其可执行，通过 with 关键字方便直接读取 vm 上的变量
+
+## 执行 render 函数，实现组件挂载
+
+生成 render 函数后，封装一个 mountComponent 方法用于执行 render 函数。
+
+对 render 内部使用到的\_c、\_v、\_s 函数进一步封装。
+
+\_render 函数调用 render 产生虚拟节点
+
+\_update 函数用于将 vnode 转换成真实 dom
+
+其中\_update 中调用 patch 函数用于对组件进行挂载及更新
+
+解析 vnode 的属性，使用提供的 dom api 创建真实 dom
+
+在元素替换时，需要插入到当前替换元素的下一个位置，再把当前元素删除，以此保证元素顺序的一致性。
