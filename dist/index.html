@@ -15,6 +15,18 @@
     </div>
     <script src="./vue.js"></script>
     <script>
+      // 1. Vue.options = {} {created(){}}
+      Vue.mixin({
+        created() {
+          console.log("mixin1-created");
+        },
+      });
+      // 2. Vue.options = {created:[fn]} {created(){}}
+      Vue.mixin({
+        created() {
+          console.log("mixin2-created");
+        },
+      });
       let vm = new Vue({
         data() {
           return {
@@ -26,13 +38,11 @@
             hobby: ["study", "eat", "travel", { a: 1 }],
           };
         },
+        // Vue.options = {created:[fn,fn]} {created:fn(){}}
+        created() {
+          console.log("created");
+        },
         el: "#app",
-      });
-      vm.name = "ls";
-      vm.age = 20;
-      vm.age = 30;
-      vm.$nextTick(() => {
-        console.log(app.innerHTML);
       });
     </script>
   </body>

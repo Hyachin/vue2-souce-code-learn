@@ -124,3 +124,17 @@ vue 中使用异步队列的形式保存接受到的全部 cb
 
 nextTick 中使用优雅降级的方式开启异步任务
 降级顺序：Promise(ie 不兼容)->MutationObserver(h5 的 api)->setImmediate(ie 专享)->setTimeout
+
+## mixin(混入)
+
+什么是混入？包含一系列混入的选项，使用 mixin 将当前选项混入到当前组件的实例中
+
+开始时 Vue.options 为空对象{}
+
+在 Vue 构造函数上绑定 mixin 方法，调用 mixin 时 实质上是在做 Vue.options 和当前 mixin 配置对象的合并（注意策略中的 key 需要特殊处理，生命周期等需要处理成数组形式，而不是简单的覆盖）
+
+parent 为 Vue.options，child 为 当前 mixin 的配置对象
+
+同时，组件实例身上的配置对象也需要和 Vue.options 进行合并
+
+在初始化组件实例时 将 mergeOptions 函数的返回结果（也就是合并后的结果）作为"新的"组件实例的配置项

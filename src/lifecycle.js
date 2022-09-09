@@ -67,8 +67,13 @@ export function mountComponent(vm, el) {
         vm._update(vm._render())
     }
     let watcher = new Watcher(vm, updateComponent, true) // true用于标识是一个渲染watcher
-    console.log(watcher);
     // 2.根据虚拟DOM产生真实DOM
 
     // 3.插入到el元素中
+}
+export function callHook(vm, hook) {
+    const handlers = vm.$options[hook]
+    if (handlers) {
+        handlers.forEach(handler => handler.call(vm))
+    }
 }

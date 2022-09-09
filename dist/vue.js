@@ -377,10 +377,18 @@
       vm._update(vm._render());
     };
 
-    var watcher = new Watcher(vm, updateComponent, true); // true用于标识是一个渲染watcher
-
-    console.log(watcher); // 2.根据虚拟DOM产生真实DOM
+    new Watcher(vm, updateComponent, true); // true用于标识是一个渲染watcher
+    // 2.根据虚拟DOM产生真实DOM
     // 3.插入到el元素中
+  }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      handlers.forEach(function (handler) {
+        return handler.call(vm);
+      });
+    }
   }
 
   var ncname = "[a-zA-Z_][\\-\\.0-9_a-zA-Z]*";
@@ -725,11 +733,57 @@
     }
   }
 
+  // 静态方法——策略
+  var strats = {};
+  var LIFECYCLE = ['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'beforeDestroy', 'destroyed'];
+  LIFECYCLE.forEach(function (hook) {
+    strats[hook] = function (p, c) {
+      // {} {created:function(){}} => {created:[fn]}
+      // {created:[fn]} {created:function(){}} => {created:[fn,fn]}
+      if (c) {
+        // 如果儿子有 父亲有 让父亲和儿子拼在一起
+        if (p) {
+          return p.concat(c); // 儿子有父亲没有，则将儿子包装成数组
+        } else {
+          return [c];
+        }
+      } else {
+        return p; // 如果儿子没有则用父亲即可
+      }
+    };
+  });
+  function mergeOptions(parent, child) {
+    var options = {};
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      if (!parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+
+    function mergeField(key) {
+      // 策略模式，减少if/else
+      if (strats[key]) {
+        options[key] = strats[key](parent[key], child[key]);
+      } else {
+        options[key] = child[key] || parent[key]; // 优先采用儿子，再采用父亲
+      }
+    }
+
+    return options;
+  }
+
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       var vm = this;
-      vm.$options = options;
+      vm.$options = mergeOptions(this.constructor.options, options);
+      callHook(vm, 'beforeCreate');
       initState(vm);
+      callHook(vm, 'created');
 
       if (options.el) {
         vm.$mount(options.el);
@@ -760,6 +814,15 @@
     };
   }
 
+  function initGlobalAPI(Vue) {
+    Vue.options = {};
+
+    Vue.mixin = function (mixin) {
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
   function Vue(options) {
     this._init(options);
   }
@@ -767,6 +830,7 @@
   Vue.prototype.$nextTick = nextTick;
   initMixin(Vue);
   initLifeCycle(Vue);
+  initGlobalAPI(Vue);
 
   return Vue;
 
