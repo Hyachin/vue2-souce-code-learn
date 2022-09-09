@@ -25,8 +25,75 @@ class Watcher {
         Dep.target = null
     }
     update() {
-        console.log('update');
-        this.get() // 重新渲染
+        // 异步更新
+        queueWatcher(this)
+        // this.get() // 重新渲染
+    }
+    run() {
+        // 真正更新视图
+        console.log('run');
+        this.get()
+    }
+}
+let queue = []
+let has = {}
+let pending = false
+function flushSchedulerQueue() {
+    let flushQueue = queue.slice(0)
+    // 初始化队列的相关数据
+    queue = []
+    has = {}
+    pending = false
+    flushQueue.forEach(q => q.run())
+}
+function queueWatcher(watcher) {
+    const id = watcher.id;
+    if (!has[id]) {
+        queue.push(watcher)
+        has[id] = true
+        // 不管update执行多少次，最终只执行一轮刷新操作
+        if (!pending) {
+            nextTick(flushSchedulerQueue)
+            pending = true
+        }
+    }
+}
+let callbacks = []
+let waiting = false
+function flushCallbacks() {
+    let cbs = callbacks.slice(0)
+    waiting = false
+    callbacks = []
+    cbs.forEach(cb => cb())
+}
+let timerFunc;
+if (Promise) {
+    timerFunc = () => {
+        Promise.resolve().then(flushCallbacks)
+    }
+} else if (MutationObserver) {
+    let observer = new MutationObserver(flushCallbacks)
+    let textNode = document.createTextNode(1)
+    observer.observe(textNode, {
+        characterData: true
+    })
+    timerFunc = () => {
+        textNode.textContent = 2
+    }
+} else if (setImmediate) {
+    timerFunc = () => {
+        setImmediate(flushCallbacks)
+    }
+} else {
+    timerFunc = () => {
+        setTimeout(flushCallbacks)
+    }
+}
+export function nextTick(cb) {
+    callbacks.push(cb) // 维护nextTick中callback方法
+    if (!waiting) {
+        timerFunc()
+        waiting = true
     }
 }
 export default Watcher

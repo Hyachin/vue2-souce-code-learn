@@ -28,13 +28,12 @@
         },
         el: "#app",
       });
-      // 下一步需要实现自动更新视图（观察者模式）
-      setTimeout(() => {
-        vm.name = "ls";
-        vm.age = 20;
-        // vm._update(vm._render());
-      }, 1000);
-      // console.log(vm);
+      vm.name = "ls";
+      vm.age = 20;
+      vm.age = 30;
+      vm.$nextTick(() => {
+        console.log(app.innerHTML);
+      });
     </script>
   </body>
 </html>

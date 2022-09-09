@@ -173,13 +173,96 @@
     }, {
       key: "update",
       value: function update() {
-        console.log('update');
-        this.get(); // 重新渲染
+        // 异步更新
+        queueWatcher(this); // this.get() // 重新渲染
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        // 真正更新视图
+        console.log('run');
+        this.get();
       }
     }]);
 
     return Watcher;
   }();
+
+  var queue = [];
+  var has = {};
+  var pending = false;
+
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0); // 初始化队列的相关数据
+
+    queue = [];
+    has = {};
+    pending = false;
+    flushQueue.forEach(function (q) {
+      return q.run();
+    });
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (!has[id]) {
+      queue.push(watcher);
+      has[id] = true; // 不管update执行多少次，最终只执行一轮刷新操作
+
+      if (!pending) {
+        nextTick(flushSchedulerQueue);
+        pending = true;
+      }
+    }
+  }
+
+  var callbacks = [];
+  var waiting = false;
+
+  function flushCallbacks() {
+    var cbs = callbacks.slice(0);
+    waiting = false;
+    callbacks = [];
+    cbs.forEach(function (cb) {
+      return cb();
+    });
+  }
+
+  var timerFunc;
+
+  if (Promise) {
+    timerFunc = function timerFunc() {
+      Promise.resolve().then(flushCallbacks);
+    };
+  } else if (MutationObserver) {
+    var observer = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(1);
+    observer.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      textNode.textContent = 2;
+    };
+  } else if (setImmediate) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks);
+    };
+  }
+
+  function nextTick(cb) {
+    callbacks.push(cb); // 维护nextTick中callback方法
+
+    if (!waiting) {
+      timerFunc();
+      waiting = true;
+    }
+  }
 
   function createElementVNode(vm, tag) {
     var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
@@ -681,6 +764,7 @@
     this._init(options);
   }
 
+  Vue.prototype.$nextTick = nextTick;
   initMixin(Vue);
   initLifeCycle(Vue);
 
