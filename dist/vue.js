@@ -606,12 +606,10 @@
   var oldArrayProto = Array.prototype; // newArrayProto.__proto__ == oldArrayProto
 
   var newArrayProto = Object.create(oldArrayProto);
-  var methods = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
+  var methods = ["push", "pop", "shift", "unshift", "splice", "sort", "reverse"];
   methods.forEach(function (method) {
     newArrayProto[method] = function () {
       var _oldArrayProto$method;
-
-      console.log('method', method);
 
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -623,12 +621,12 @@
       var ob = this.__ob__;
 
       switch (method) {
-        case 'push':
-        case 'unshift':
+        case "push":
+        case "unshift":
           inserted = args;
           break;
 
-        case 'splice':
+        case "splice":
           inserted = args.slice(2);
           break;
       }
@@ -637,6 +635,7 @@
         ob.observeArray(inserted);
       }
 
+      ob.dep.notify();
       return result;
     };
   });
@@ -645,7 +644,9 @@
     function Observer(data) {
       _classCallCheck(this, Observer);
 
-      Object.defineProperty(data, '__ob__', {
+      // 给每个对象都增加收集功能
+      this.dep = new Dep();
+      Object.defineProperty(data, "__ob__", {
         value: this,
         enumerable: false
       }); // data.__ob__ = this
@@ -678,17 +679,37 @@
   }();
 
   function observe(data) {
-    if (_typeof(data) !== 'object' || data === null) return;
+    if (_typeof(data) !== "object" || data === null) return;
     return new Observer(data);
   }
+
+  function dependArray(value) {
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__ob__ && current.__ob__.dep.depend();
+
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
+
   function defineReactive(target, key, value) {
-    observe(value); //对深层嵌套的对象也进行属性劫持
+    var childOb = observe(value); //对深层嵌套的对象也进行属性劫持
 
     var dep = new Dep();
     Object.defineProperty(target, key, {
       get: function get() {
         if (Dep.target) {
           dep.depend();
+
+          if (childOb) {
+            childOb.dep.depend();
+
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
         } // console.log(`获取${key}属性，值为${value}`);
 
 

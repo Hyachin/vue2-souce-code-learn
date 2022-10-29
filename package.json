@@ -2,7 +2,7 @@
   "name": "vue2-souce-code-learn",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "arr.js",
   "scripts": {
     "dev": "rollup -cw"
   },
